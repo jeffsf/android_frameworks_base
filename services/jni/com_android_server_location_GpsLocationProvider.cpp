@@ -237,6 +237,8 @@ static void android_location_GpsLocationProvider_class_init_native(JNIEnv* env, 
     int err;
     hw_module_t* module;
 
+    LOGD("GPS setup -- Enter GpsLocationProvider init_native()");
+
     method_reportLocation = env->GetMethodID(clazz, "reportLocation", "(IDDDFFFJ)V");
     method_reportStatus = env->GetMethodID(clazz, "reportStatus", "(I)V");
     method_reportSvStatus = env->GetMethodID(clazz, "reportSvStatus", "()V");
@@ -251,14 +253,29 @@ static void android_location_GpsLocationProvider_class_init_native(JNIEnv* env, 
     method_requestUtcTime = env->GetMethodID(clazz,"requestUtcTime","()V");
 
     err = hw_get_module(GPS_HARDWARE_MODULE_ID, (hw_module_t const**)&module);
+    LOGD("GPS setup -- GpsLocationProvider init_native() hw_get_module()");
     if (err == 0) {
+      LOGD("GPS setup -- GpsLocationProvider init_native() hw_get_module() err=0");
         hw_device_t* device;
         err = module->methods->open(module, GPS_HARDWARE_MODULE_ID, &device);
+	LOGD("GPS setup -- GpsLocationProvider init_native() open GPS_HARDWARE_MODULE_ID err=0");
         if (err == 0) {
             gps_device_t* gps_device = (gps_device_t *)device;
             sGpsInterface = gps_device->get_gps_interface(gps_device);
-        }
+	    if (sGpsInterface) {
+	      LOGD("GPS setup -- GpsLocationProvider init_native() ->get_gps_interface(gps_device)");
+	    } else {
+	      LOGE("GPS setup -- GpsLocationProvider init_native() FAILURE: ->get_gps_interface(gps_device)");
+	    }
+        } else {
+	  LOGE("GPS setup -- GpsLocationProvider init_native() FAQILURE: open GPS_HARDWARE_MODULE_ID err=%d",err);
+	}
+    } else {
+      LOGE("GPS setup -- GpsLocationProvider init_native() FAILURE: hw_get_module() err=%d", err);
     }
+
+    LOGD("GPS setup -- hw_get_module() block complete");
+
     if (sGpsInterface) {
         sGpsXtraInterface =
             (const GpsXtraInterface*)sGpsInterface->get_extension(GPS_XTRA_INTERFACE);
@@ -271,6 +288,14 @@ static void android_location_GpsLocationProvider_class_init_native(JNIEnv* env, 
         sAGpsRilInterface =
             (const AGpsRilInterface*)sGpsInterface->get_extension(AGPS_RIL_INTERFACE);
     }
+
+    LOGD("GPS setup -- sGpsXtraInterface  %s", sGpsXtraInterface  ? "found" : "NOT FOUND");
+    LOGD("GPS setup -- sAGpsInterface     %s", sAGpsInterface     ? "found" : "NOT FOUND");
+    LOGD("GPS setup -- sGpsNiInterface    %s", sGpsNiInterface    ? "found" : "NOT FOUND");
+    LOGD("GPS setup -- sGpsDebugInterface %s", sGpsDebugInterface ? "found" : "NOT FOUND");
+    LOGD("GPS setup -- sAGpsRilInterface  %s", sAGpsRilInterface  ? "found" : "NOT FOUND");
+
+    LOGD("GPS setup -- Exit GpsLocationProvider init_native()");
 }
 
 static jboolean android_location_GpsLocationProvider_is_supported(JNIEnv* env, jclass clazz) {
